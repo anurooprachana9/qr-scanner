@@ -4,23 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>QR Attendance Scanner</title>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; background: #f4f4f4; }
     #reader { width: 100%; max-width: 400px; margin: 0 auto; border-radius: 12px; overflow: hidden; }
-    #result { margin-top: 20px; padding: 20px; border-radius: 10px; font-size: 22px; font-weight: bold; display: none; }
+    #result { margin-top: 20px; padding: 20px; border-radius: 10px; font-size: 20px; font-weight: bold; display: none; word-break: break-word; }
     .success { background: #d4edda; color: #155724; }
     .invalid { background: #f8d7da; color: #721c24; }
     .duplicate { background: #fff3cd; color: #856404; }
     button { margin-top: 15px; padding: 14px 28px; font-size: 17px; border: none; border-radius: 8px;
              background: #4285f4; color: white; cursor: pointer; }
     h2 { color: #333; }
+    #status { color: #666; font-size: 14px; margin-top: 10px; }
   </style>
 </head>
 <body>
   <h2>QR Attendance Scanner</h2>
   <div id="reader"></div>
   <div id="result"></div>
+  <div id="status">Loading camera...</div>
   <button id="nextBtn" style="display:none;" onclick="scanNext()">Scan Next</button>
 
   <script>
@@ -31,6 +33,12 @@
     let html5QrCode;
     let scanning = false;
 
+    function setStatus(msg, isError) {
+      const s = document.getElementById('status');
+      s.innerText = msg;
+      s.style.color = isError ? '#c0392b' : '#666';
+    }
+
     function onScanSuccess(decodedText) {
       if (!scanning) return;
       scanning = false;
@@ -39,7 +47,7 @@
       fetch(API_URL + "?token=" + encodeURIComponent(decodedText))
         .then(r => r.json())
         .then(showResult)
-        .catch(() => showResult({ status: "invalid" }));
+        .catch(err => showResult({ status: "invalid" }));
     }
 
     function showResult(res) {
@@ -60,18 +68,35 @@
     }
 
     function startScanner() {
-      html5QrCode = new Html5Qrcode("reader");
-      html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        onScanSuccess
-      ).then(() => { scanning = true; })
-       .catch(err => {
-         document.getElementById('result').style.display = 'block';
-         document.getElementById('result').className = 'invalid';
-         document.getElementById('result').innerText = 'Camera error: ' + err;
-       });
+      try {
+        if (typeof Html5Qrcode === 'undefined') {
+          setStatus('Error: the scanner library did not load. Check your internet connection and reload this page.', true);
+          return;
+        }
+        if (API_URL.indexOf('PASTE_YOUR') === 0) {
+          setStatus('Error: API_URL is still the placeholder text. Edit index.html on GitHub and paste your Apps Script URL.', true);
+          return;
+        }
+
+        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: 250 },
+          onScanSuccess
+        ).then(() => {
+          scanning = true;
+          setStatus('Camera ready — point at a QR code.');
+        }).catch(err => {
+          setStatus('Camera error: ' + err + '. Make sure you allowed camera access, and that no other app is using the camera.', true);
+        });
+      } catch (err) {
+        setStatus('Unexpected error: ' + err.message, true);
+      }
     }
+
+    window.onerror = function(msg) {
+      setStatus('Script error: ' + msg, true);
+    };
 
     window.onload = startScanner;
   </script>
