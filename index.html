@@ -22,13 +22,13 @@
   <h2>QR Attendance Scanner</h2>
   <div id="reader"></div>
   <div id="result"></div>
-  <div id="status">Loading camera...</div>
+  <div id="status">Tap the button below to start the camera.</div>
+  <button id="startBtn" onclick="startScanner()">Start Scanning</button>
   <button id="nextBtn" style="display:none;" onclick="scanNext()">Scan Next</button>
 
   <script>
     // PASTE your deployed Apps Script Web App URL here (ends in /exec)
-    const API_URL = "https://script.google.com/a/anuroopwiwaha.com/macros/s/AKfycby3Rxo5enadUSKocbvqTqn1kGxTMmHQwxCgUvmandHA4XNgSARO/exec
-";
+    const API_URL = "https://script.google.com/macros/s/AKfycbzaYnH8DVfJ4l_v15TaHqQER0SLJCoHGYvlCC9lgR9Z2sE1rqElY_6txBTirbM8DETdhg/exec";
 
     let html5QrCode;
     let scanning = false;
@@ -78,6 +78,9 @@
           return;
         }
 
+        document.getElementById('startBtn').style.display = 'none';
+        setStatus('Requesting camera access...');
+
         html5QrCode = new Html5Qrcode("reader");
         html5QrCode.start(
           { facingMode: "environment" },
@@ -87,9 +90,11 @@
           scanning = true;
           setStatus('Camera ready — point at a QR code.');
         }).catch(err => {
+          document.getElementById('startBtn').style.display = 'inline-block';
           setStatus('Camera error: ' + err + '. Make sure you allowed camera access, and that no other app is using the camera.', true);
         });
       } catch (err) {
+        document.getElementById('startBtn').style.display = 'inline-block';
         setStatus('Unexpected error: ' + err.message, true);
       }
     }
@@ -97,8 +102,6 @@
     window.onerror = function(msg) {
       setStatus('Script error: ' + msg, true);
     };
-
-    window.onload = startScanner;
   </script>
 </body>
 </html>
